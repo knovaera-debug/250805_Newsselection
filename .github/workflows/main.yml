@@ -26,17 +26,19 @@ jobs:
           sudo apt update
           sudo apt install -y wget unzip xvfb libxi6
 
-          # ✅ Install specific version of Google Chrome (v137)
-          wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_137.0.7487.0-1_amd64.deb
+          # ✅ Install latest Google Chrome
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
 
-          # ✅ Install matching Chromedriver (v137)
-          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/137.0.7487.0/chromedriver_linux64.zip
+          # ✅ Install fixed Chromedriver version (137.0.7487.0)
+          CHROMEDRIVER_VERSION="137.0.7487.0"
+          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
           unzip chromedriver.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
 
           # ✅ Check versions
+          echo "✅ Installed versions:"
           google-chrome --version
           chromedriver --version
 
