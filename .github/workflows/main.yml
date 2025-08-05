@@ -21,24 +21,36 @@ jobs:
           echo "$GOOGLE_CREDENTIALS" > credentials.json
           echo "✅ credentials.json 書き込み完了"
 
-      - name: 🛠 Install Chrome and Chromedriver (fixed to v137)
+      - name: 🛠 Install Chrome and Chromedriver
         run: |
           sudo apt update
-          sudo apt install -y wget unzip xvfb libxi6
+          sudo apt install -y wget unzip xvfb libxi6 curl jq
 
-          # ✅ Install latest Google Chrome
+          # Install latest stable Google Chrome
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
+          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
+          rm google-chrome-stable_current_amd64.deb
 
-          # ✅ Install fixed Chromedriver version (137.0.7487.0)
-          CHROMEDRIVER_VERSION="137.0.7487.0"
-          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
+          # Get the installed Chrome version
+          CHROME_VERSION=$(google-chrome --version | sed -E 's/.* ([0-9]+)\..*/\1/')
+          echo "Installed Chrome version: $CHROME_VERSION"
+
+          # Install the corresponding Chromedriver
+          CHROMEDRIVER_URL=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | jq -r --arg version "$CHROME_VERSION" '.versions[] | select(.version | startswith($version)) | .downloads.chromedriver[] | select(.platform=="linux64") | .url')
+
+          if [ -z "$CHROMEDRIVER_URL" ]; then
+            echo "Failed to find a matching Chromedriver for Chrome version $CHROME_VERSION."
+            exit 1
+          fi
+
+          echo "Downloading Chromedriver from: $CHROMEDRIVER_URL"
+          wget -O chromedriver.zip "$CHROMEDRIVER_URL"
           unzip chromedriver.zip
-          sudo mv chromedriver /usr/local/bin/
+          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
 
-          # ✅ Check versions
-          echo "✅ Installed versions:"
+          # Check versions
+          echo "Installed versions:"
           google-chrome --version
           chromedriver --version
 
