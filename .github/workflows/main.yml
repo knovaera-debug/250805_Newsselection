@@ -1,25 +1,63 @@
-- name: 🛠 Install Chrome and Chromedriver
-  run: |
-    sudo apt update
-    sudo apt install -y wget unzip xvfb libxi6
+name: Yahoo News Scraper
 
-    # Install Chrome
-    wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-    sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
+on:
+  schedule:
+    # JST 15:00（= UTC 6:00）に毎日実行
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+  # 毎時実行
+    - cron: '0 * * * *'
 
-    # Get Chrome major version
-    CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
-    MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
+jobs:
+  run:
+    runs-on: ubuntu-latest
 
-    # Get matching Chromedriver version
-    LATEST_URL="https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}"
-    CHROMEDRIVER_VERSION=$(curl -s $LATEST_URL)
+    steps:
+      - name: 📦 リポジトリをチェックアウト
+        uses: actions/checkout@v3
 
-    echo "Chrome version: $CHROME_VERSION"
-    echo "Chromedriver version: $CHROMEDRIVER_VERSION"
+      - name: 🛠 Google Chrome と Chromedriver をインストール
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip xvfb libxi6
 
-    # Download and install Chromedriver
-    wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
-    unzip chromedriver.zip
-    sudo mv chromedriver /usr/local/bin/
-    sudo chmod +x /usr/local
+          # Chrome をインストール
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
+
+          # Chromeバージョン取得
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
+          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
+
+          # 対応するChromedriverバージョンを取得
+          LATEST_URL="https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}"
+          CHROMEDRIVER_VERSION=$(curl -s $LATEST_URL)
+
+          echo "✅ Chrome version: $CHROME_VERSION"
+          echo "✅ Chromedriver version: $CHROMEDRIVER_VERSION"
+
+          # Chromedriverをダウンロード・インストール
+          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
+          unzip chromedriver.zip
+          sudo mv chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+
+      - name: 🐍 Python セットアップ
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: 📦 依存関係をインストール
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🔑 認証情報を保存（Google Sheets用）
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          echo "${GOOGLE_CREDENTIALS}" > credentials.json
+
+      - name: 🧠 ニュース取得スクリプトを実行
+        run: |
+          python main.py
