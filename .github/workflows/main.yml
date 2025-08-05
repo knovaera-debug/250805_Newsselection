@@ -21,38 +21,24 @@ jobs:
           echo "$GOOGLE_CREDENTIALS" > credentials.json
           echo "✅ credentials.json 書き込み完了"
 
-      - name: 🛠 Install Chrome and Chromedriver
+      - name: 🛠 Install Chrome and Chromedriver (fixed to v137)
         run: |
           sudo apt update
           sudo apt install -y wget unzip xvfb libxi6
 
-          # Install Google Chrome
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          # ✅ Install specific version of Google Chrome (v137)
+          wget https://dl.google.com/linux/chrome/deb/pool/main/g/google-chrome-stable/google-chrome-stable_137.0.7487.0-1_amd64.deb
           sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
 
-          # Get installed Chrome version
-          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
-          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
-
-          echo "✅ Chrome version: $CHROME_VERSION"
-          echo "✅ Major version: $MAJOR_VERSION"
-
-          # Get matching Chromedriver version
-          CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}")
-
-          # Fallback check
-          if [ -z "$CHROMEDRIVER_VERSION" ]; then
-            echo "❌ Failed to retrieve chromedriver version"
-            exit 4
-          fi
-
-          echo "✅ Chromedriver version: $CHROMEDRIVER_VERSION"
-
-          # Download and install Chromedriver
-          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
+          # ✅ Install matching Chromedriver (v137)
+          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/137.0.7487.0/chromedriver_linux64.zip
           unzip chromedriver.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
+
+          # ✅ Check versions
+          google-chrome --version
+          chromedriver --version
 
       - name: 🐍 Setup Python
         uses: actions/setup-python@v4
