@@ -1,68 +1,40 @@
-name: Yahoo News Scraper
+name: Run News Scraper (Google & Yahoo)
 
 on:
-  workflow_dispatch:  # 手動実行
-  schedule:           # 自動実行（日本時間 15:00 と毎時）
-    - cron: '0 6 * * *'  # JST 15:00（UTC 6:00）
-    - cron: '0 * * * *'  # 毎時00分
+  schedule:
+    # ✅ JSTで15分おき
+    - cron: '*/15 * * * *'
+    # ✅ JSTで毎時0分（1時間おき）
+    - cron: '0 * * * *'
+    # ✅ JSTで毎日15:00（→UTCでは06:00）
+    - cron: '0 6 * * *'
+
+  workflow_dispatch:
 
 jobs:
-  run:
+  scrape-news:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📁 Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: 🔐 Setup Google credentials
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: |
-          echo "$GOOGLE_CREDENTIALS" > credentials.json
-          echo "✅ credentials.json 書き込み完了"
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.9'
 
-      - name: 🛠 Install Chrome and Chromedriver
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y wget unzip xvfb libxi6 curl jq
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
 
-          # Install latest stable Google Chrome
-          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
-          sudo dpkg -i google-chrome-stable_current_amd64.deb || sudo apt-get install -f -y
-          rm google-chrome-stable_current_amd64.deb
+    - name: Run Scraper
+      env:
+        GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      run: |
+        python main.py
 
-          # Get the installed Chrome version
-          CHROME_VERSION=$(google-chrome --version | sed -E 's/.* ([0-9]+)\..*/\1/')
-          echo "Installed Chrome version: $CHROME_VERSION"
-
-          # Install the corresponding Chromedriver
-          CHROMEDRIVER_URL=$(curl -s "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json" | jq -r --arg version "$CHROME_VERSION" '.versions[] | select(.version | startswith($version)) | .downloads.chromedriver[] | select(.platform=="linux64") | .url')
-
-          if [ -z "$CHROMEDRIVER_URL" ]; then
-            echo "Failed to find a matching Chromedriver for Chrome version $CHROME_VERSION."
-            exit 1
-          fi
-
-          echo "Downloading Chromedriver from: $CHROMEDRIVER_URL"
-          wget -O chromedriver.zip "$CHROMEDRIVER_URL"
-          unzip chromedriver.zip
-          sudo mv chromedriver-linux64/chromedriver /usr/local/bin/
-          sudo chmod +x /usr/local/bin/chromedriver
-
-          # Check versions
-          echo "Installed versions:"
-          google-chrome --version
-          chromedriver --version
-
-      - name: 🐍 Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-
-      - name: 📦 Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: ▶️ Run Yahoo News Scraper
-        run: python main.py
+    - name: Check for workflow failure (optional)
+      if: ${{ failure() }}
+      run: echo "Workflow failed. Check logs for details."
