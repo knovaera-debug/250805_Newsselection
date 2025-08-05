@@ -2,8 +2,8 @@ name: Yahoo News Scraper
 
 on:
   workflow_dispatch:  # 手動実行
-  schedule:           # 定期実行
-    - cron: '0 6 * * *'  # 毎日15:00 JST
+  schedule:           # 自動実行（日本時間 15:00 と毎時）
+    - cron: '0 6 * * *'  # JST 15:00（UTC 6:00）
     - cron: '0 * * * *'  # 毎時00分
 
 jobs:
@@ -14,26 +14,41 @@ jobs:
       - name: 📁 Checkout repository
         uses: actions/checkout@v3
 
+      - name: 🔐 Setup Google credentials
+        env:
+          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          echo "$GOOGLE_CREDENTIALS" > credentials.json
+          echo "✅ credentials.json 書き込み完了"
+
       - name: 🛠 Install Chrome and Chromedriver
         run: |
           sudo apt update
           sudo apt install -y wget unzip xvfb libxi6
-          
-          # Install Chrome
+
+          # Install Google Chrome
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
 
-          # Get Chrome version
+          # Get installed Chrome version
           CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
           MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
 
-          # Get matching Chromedriver version
-          LATEST_URL="https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}"
-          CHROMEDRIVER_VERSION=$(curl -s $LATEST_URL)
-
           echo "✅ Chrome version: $CHROME_VERSION"
+          echo "✅ Major version: $MAJOR_VERSION"
+
+          # Get matching Chromedriver version
+          CHROMEDRIVER_VERSION=$(curl -s "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}")
+
+          # Fallback check
+          if [ -z "$CHROMEDRIVER_VERSION" ]; then
+            echo "❌ Failed to retrieve chromedriver version"
+            exit 4
+          fi
+
           echo "✅ Chromedriver version: $CHROMEDRIVER_VERSION"
 
+          # Download and install Chromedriver
           wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
           unzip chromedriver.zip
           sudo mv chromedriver /usr/local/bin/
@@ -48,12 +63,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      - name: 🔐 Setup Google credentials
-        env:
-          GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        run: |
-          echo "$GOOGLE_CREDENTIALS" > credentials.json
 
       - name: ▶️ Run Yahoo News Scraper
         run: python main.py
