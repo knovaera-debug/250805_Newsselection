@@ -1,12 +1,10 @@
 name: Yahoo News Scraper
 
 on:
-  schedule:
-    # JST 15:00（UTC 6:00）に毎日実行
-    - cron: '0 6 * * *'
-    # 毎時00分に実行
-    - cron: '0 * * * *'
-  workflow_dispatch:  # ← これが手動実行のトリガー！
+  workflow_dispatch:  # 手動実行
+  schedule:           # 定期実行
+    - cron: '0 6 * * *'  # 毎日15:00 JST
+    - cron: '0 * * * *'  # 毎時00分
 
 jobs:
   run:
@@ -36,7 +34,6 @@ jobs:
           echo "✅ Chrome version: $CHROME_VERSION"
           echo "✅ Chromedriver version: $CHROMEDRIVER_VERSION"
 
-          # Download Chromedriver
           wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
           unzip chromedriver.zip
           sudo mv chromedriver /usr/local/bin/
