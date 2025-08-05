@@ -1,0 +1,55 @@
+name: Run News Scraper
+
+on:
+  schedule:
+    # 1時間ごとに実行（UTC）
+    - cron: '0 * * * *'
+
+    # 日本時間 15:00 に実行（UTC 06:00）
+    - cron: '0 6 * * *'
+
+  # 手動実行も可能にする
+  workflow_dispatch:
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📦 Checkout repository
+        uses: actions/checkout@v3
+
+      - name: 🧰 Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.11
+
+      - name: 🛠 Install Chrome and Chromedriver
+        run: |
+          sudo apt update
+          sudo apt install -y wget unzip xvfb libxi6
+          
+          # Install Google Chrome
+          wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
+          sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
+
+          # Get Chrome version
+          CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
+          MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
+
+          # Download matching chromedriver
+          wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${MAJOR_VERSION}/chromedriver_linux64.zip
+          unzip chromedriver.zip
+          sudo mv chromedriver /usr/local/bin/
+          sudo chmod +x /usr/local/bin/chromedriver
+
+      - name: 📦 Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: ▶️ Run news scraper
+        env:
+          GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_CREDENTIALS }}
+        run: |
+          python main.py
