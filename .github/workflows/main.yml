@@ -29,9 +29,14 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
 
-    - name: Run Scraper
+    - name: 🔐 Create credentials.json
       env:
         GCP_SERVICE_ACCOUNT_KEY: ${{ secrets.GCP_SERVICE_ACCOUNT_KEY }}
+      run: |
+        echo "$GCP_SERVICE_ACCOUNT_KEY" > credentials.json
+        echo "✅ credentials.json が作成されました。"
+
+    - name: ▶️ Run Scraper
       run: |
         python main.py
 
