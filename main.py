@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 import gspread
 
 KEYWORD = "日産"
-SPREADSHEET_ID = "1RglATeTbLU1SqlfXnNToJqhXLdNoHCdePldioKDQgU8"
+SPREADSHEET_ID = "1ZqRekcKkUUoVxZuO8hrWRWwTauyEk8kD_NmV5IZy02w"
 
 def format_datetime(dt_obj):
     return dt_obj.strftime("%Y/%m/%d %H:%M")
