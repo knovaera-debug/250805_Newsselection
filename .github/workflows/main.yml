@@ -2,62 +2,61 @@ name: Yahoo News Scraper
 
 on:
   schedule:
-    # JST 15:00（= UTC 6:00）に毎日実行
+    # JST 15:00（UTC 6:00）に毎日実行
     - cron: '0 6 * * *'
-  workflow_dispatch:
-  # 毎時実行
+    # 毎時00分に実行
     - cron: '0 * * * *'
+  workflow_dispatch:  # ← これが手動実行のトリガー！
 
 jobs:
   run:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📦 リポジトリをチェックアウト
+      - name: 📁 Checkout repository
         uses: actions/checkout@v3
 
-      - name: 🛠 Google Chrome と Chromedriver をインストール
+      - name: 🛠 Install Chrome and Chromedriver
         run: |
           sudo apt update
           sudo apt install -y wget unzip xvfb libxi6
-
-          # Chrome をインストール
+          
+          # Install Chrome
           wget https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb
           sudo dpkg -i google-chrome*.deb || sudo apt -f install -y
 
-          # Chromeバージョン取得
+          # Get Chrome version
           CHROME_VERSION=$(google-chrome --version | grep -oP '\d+\.\d+\.\d+\.\d+')
           MAJOR_VERSION=$(echo $CHROME_VERSION | cut -d '.' -f 1)
 
-          # 対応するChromedriverバージョンを取得
+          # Get matching Chromedriver version
           LATEST_URL="https://chromedriver.storage.googleapis.com/LATEST_RELEASE_${MAJOR_VERSION}"
           CHROMEDRIVER_VERSION=$(curl -s $LATEST_URL)
 
           echo "✅ Chrome version: $CHROME_VERSION"
           echo "✅ Chromedriver version: $CHROMEDRIVER_VERSION"
 
-          # Chromedriverをダウンロード・インストール
+          # Download Chromedriver
           wget -O chromedriver.zip https://chromedriver.storage.googleapis.com/${CHROMEDRIVER_VERSION}/chromedriver_linux64.zip
           unzip chromedriver.zip
           sudo mv chromedriver /usr/local/bin/
           sudo chmod +x /usr/local/bin/chromedriver
 
-      - name: 🐍 Python セットアップ
+      - name: 🐍 Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.11'
 
-      - name: 📦 依存関係をインストール
+      - name: 📦 Install Python dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: 🔑 認証情報を保存（Google Sheets用）
+      - name: 🔐 Setup Google credentials
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
         run: |
-          echo "${GOOGLE_CREDENTIALS}" > credentials.json
+          echo "$GOOGLE_CREDENTIALS" > credentials.json
 
-      - name: 🧠 ニュース取得スクリプトを実行
-        run: |
-          python main.py
+      - name: ▶️ Run Yahoo News Scraper
+        run: python main.py
