@@ -75,27 +75,32 @@ except Exception as e:
 # ニュース記事・コメント取得
 # =========================
 def extract_article_and_comments(url):
-    driver.get(url)
-    time.sleep(2)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    try:
+        driver.get(url)
+        time.sleep(2)
+        soup = BeautifulSoup(driver.page_source, 'html.parser')
 
-    # タイトル
-    title_tag = soup.find('title')
-    title = title_tag.text.strip() if title_tag else '（タイトル取得失敗）'
+        # タイトル
+        title_tag = soup.find('title')
+        title = title_tag.text.strip() if title_tag else '（タイトル取得失敗）'
 
-    # 本文
-    body_area = soup.find('article') or soup.find('div', class_='article_body')
-    body = body_area.get_text(separator='\n').strip() if body_area else '（本文取得失敗）'
+        # 本文
+        body_area = soup.find('article') or soup.find('div', class_='article_body')
+        body = body_area.get_text(separator='\n').strip() if body_area else '（本文取得失敗）'
 
-    # コメント
-    comments = []
-    comment_tags = soup.find_all('p', class_='sc-169yn8p-10 hYFULX')
-    for tag in comment_tags:
-        text = tag.get_text(strip=True)
-        if text:
-            comments.append(text)
-
-    return title, body, comments
+        # コメント
+        comments = []
+        comment_tags = soup.find_all('p', class_='sc-169yn8p-10 hYFULX')
+        for tag in comment_tags:
+            text = tag.get_text(strip=True)
+            if text:
+                comments.append(text)
+        
+        return title, body, comments
+    
+    except Exception as e:
+        print(f"❌ URL {url} のスクレイピングエラー: {e}")
+        return '（取得失敗）', '（取得失敗）', []
 
 # =========================
 # 処理ループ
@@ -125,4 +130,4 @@ for idx, url in enumerate(urls):
 
     except Exception as e:
         print(f"❌ [{row}] エラー: {e}")
-        out_ws.update(f'B{row}', '（取得失敗）_
+        out_ws.update(f'B{row}', '（取得失敗）')
